@@ -271,12 +271,12 @@ class Test_Results(generic_results):
         self._test_results = collections.OrderedDict()
         self._ate_results = collections.OrderedDict()
         self._init(name, module)
-        self._test_declarations = []
+        self._test_declarations = collections.OrderedDict()
         self.test_limits = {}
     def json_report(self):
         return self._json_report(declarations=self._test_declarations, results=self._test_results, ate_results=self._ate_results)
     def get_test_declarations(self):
-        return self._test_declarations
+        return list(self._test_declarations.keys())
     def get_test_declaration(self, key):
         return self._test_declarations[key]
     def __str__(self):
@@ -348,7 +348,7 @@ class Test_Results(generic_results):
         assert match_count == rowcount
     def _evaluate_list(self, name, iter_data, conditions, query=None):
         if name not in self._test_declarations:
-            self._test_declarations.append(name)
+            self._register_test(name=name, **self.test_limits[name])
             self._test_results[name] = self._test_results_list(name=name, upper_limit=self.test_limits[name]['upper_limit'], lower_limit=self.test_limits[name]['lower_limit'])
         #############################################################
         # TODO deal with functional test pass/fail non-numeric data #
