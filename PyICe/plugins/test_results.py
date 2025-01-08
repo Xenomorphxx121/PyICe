@@ -46,7 +46,7 @@ def none_max(a, b):
     if b is None:
         return a
     return max(a,b)
-def none_abs(a):
+def none_abs(a):            ## Used in correlation
     if a is None:
         return None
     return abs(a)
@@ -162,9 +162,9 @@ class generic_results():
 
 class Test_Results(generic_results):
     class _test_result(collections.namedtuple('test_result', ['test_name', 'conditions', 'min_data', 'max_data', 'passes', 'failure_reason', 'collected_data', 'plot', 'query'])):
-        '''add some helper moethods for easy summary'''
+        '''add some helper methods for easy summary'''
         def __new__(cls, **kwargs):
-            '''fix (allowed) missing fields. FOr instance, original JSON didn't retain SQL query string.'''
+            '''fix (allowed) missing fields. For instance, original JSON didn't retain SQL query string.'''
             if 'query' not in kwargs:
                 kwargs['query'] = None
             return super().__new__(cls, **kwargs)
@@ -203,7 +203,7 @@ class Test_Results(generic_results):
                               min_data=none_min(self.min_data, other.min_data), #None creeps in from register_test_failure()
                               max_data=none_max(self.max_data, other.max_data), #None creeps in from register_test_failure()
                               passes=self.passes and other.passes,
-                              failure_reason=f'{self.failure_reason}{other.failure_reason}', #TODO cleanup format
+                              failure_reason=f'{self.failure_reason}{other.failure_reason}',
                               collected_data=self.collected_data + other.collected_data,
                               plot=self.plot + other.plot,
                               query=self.query
@@ -259,15 +259,14 @@ class Test_Results(generic_results):
             return ret
         def factored(self):
             '''returns new object; doesn't modifiy existing one in place
-            merges all resutls from like conditions'''
+            merges all results from like conditions'''
             ret = type(self)(self.name, self.upper_limit, self.lower_limit)
             for cond_hash in self.get_conditions():
                 data_group = functools.reduce(lambda a,b: a+b, [data_group for data_group in self if make_hash(data_group.conditions)==cond_hash])
                 ret.append(data_group)
             return ret
     def __init__(self, name, module):
-        '''TODO'''
-
+        '''Provides methods for evaluating and storing data for a given parameter in a given test script.'''
         self._test_results = collections.OrderedDict()
         self._ate_results = collections.OrderedDict()
         self._init(name, module)
@@ -281,7 +280,6 @@ class Test_Results(generic_results):
         return self._test_declarations[key]
     def __str__(self):
         '''printable regression results'''
-        #TODO more concise summary when passing, grouped results, etc.
         resp = ''
         passes = bool(len(self._test_declarations))
         for test in self._test_declarations:
@@ -431,9 +429,9 @@ class Test_Results_Reload(Test_Results):
 class correlation_results(generic_results):
     _correlation_declaration = collections.namedtuple('correlation_declaration', ['refid_name', 'ATE_test', 'ATE_subtest', 'owner', 'assignee', 'lower_limit', 'upper_limit', 'unit', 'description', 'notes', 'limits_units_percentage'])
     class _correlation_result(collections.namedtuple('correlation_result', ['refid_name', 'temperature', 'conditions', 'bench_data', 'ate_data', 'error', 'failure_reason', 'passes', 'query'])):
-        '''add some helper moethods for easy summary'''
+        '''add some helper methods for easy summary'''
         def __new__(cls, **kwargs):
-            '''fix (allowed) missing fields. FOr instance, original JSON didn't retain SQL query string.'''
+            '''fix (allowed) missing fields. For instance, original JSON didn't retain SQL query string.'''
             if 'query' not in kwargs:
                 kwargs['query'] = None
             return super().__new__(cls, **kwargs)
