@@ -153,8 +153,8 @@ class Plugin_Manager():
                     if 'cleanup_list' in instrument_dict:
                         for fn in instrument_dict['cleanup_list']:
                             self.cleanup_fns.append(fn)
-                    if 'temperature_run_startup' in instrument_dict:
-                        for fn in instrument_dict['temperature_run_startup']:
+                    if 'temperature_run_startup_list' in instrument_dict:
+                        for fn in instrument_dict['temperature_run_startup_list']:
                             self.temp_run_fns.append(fn)
                     if 'startup_list' in instrument_dict:
                         for fn in instrument_dict['startup_list']:
@@ -416,17 +416,28 @@ class Plugin_Manager():
             arch_plot_scripts = []
             for (test, db_table, db_file) in archived_tables:
                 if hasattr(test, 'plot'):
-                    dest_file = os.path.join(os.path.dirname(db_file), f"replot_data.py")
-                    import_str = test._module_path[test._module_path.index(test.project_folder_name):].replace(os.sep,'.')
-                    plot_script_src = "if __name__ == '__main__':\n"
-                    plot_script_src += f"    from PyICe.plugins.plugin_manager import Plugin_Manager\n"
-                    plot_script_src += f"    from {import_str}.test import Test\n"
-                    plot_script_src += f"    pm = Plugin_Manager()\n"
-                    plot_script_src += f"    pm.add_test(Test)\n"
-                    plot_script_src += f"    pm.plot(database='data_log.sqlite', table_name='{test.get_name()}')\n"
                     try:
-                        with open(dest_file, 'a') as f: #exists, overwrite, append?
-                            f.write(plot_script_src)
+                        dest_file = os.path.join(os.path.dirname(db_file), f"replot_data.py")
+                        import_str = test._module_path[test._module_path.index(test.project_folder_name):].replace(os.sep,'.')
+                        plot_script_src = "if __name__ == '__main__':\n"
+                        plot_script_src += f"    from PyICe.plugins.plugin_manager import Plugin_Manager\n"
+                        plot_script_src += f"    from {import_str}.test import Test\n"
+                        plot_script_src += f"    pm = Plugin_Manager()\n"
+                        plot_script_src += f"    pm.add_test(Test)\n"
+                        plot_script_src += f"    pm.plot(database='data_log.sqlite', table_name='{test.get_name()}')\n"
+                        try:
+                            with open(dest_file, 'a') as f: #exists, overwrite, append?
+                                f.write(plot_script_src)
+                        except Exception as e:
+                            #write locked? exists?
+                            print(type(e))
+                            print(e)
+                        with contextlib.redirect_stdout(io.StringIO()):
+                            
+                            test._database = os.path.relpath(db_file)
+                            test._table_name = db_table
+                            test._plot_filepath = os.path.dirname(os.path.abspath(os.path.relpath(db_file)))
+                            self.plot(database=os.path.relpath(db_file), table_name=db_table, test_list=[test], alert=False)
                     except Exception as e:
                         #write locked? exists?
                         print(type(e))
@@ -434,17 +445,24 @@ class Plugin_Manager():
                     with contextlib.redirect_stdout(io.StringIO()):
                         self.plot(database=os.path.relpath(db_file), table_name=db_table, test_list=[test])
                 if 'evaluate_tests' in self.used_plugins:
-                    dest_file = os.path.join(os.path.dirname(db_file), f"reeval_data.py")
-                    import_str = test._module_path[test._module_path.index(test.project_folder_name):].replace(os.sep,'.')
-                    plot_script_src = "if __name__ == '__main__':\n"
-                    plot_script_src += f"    from PyICe.plugins.plugin_manager import Plugin_Manager\n"
-                    plot_script_src += f"    from {import_str}.test import Test\n"
-                    plot_script_src += f"    pm = Plugin_Manager()\n"
-                    plot_script_src += f"    pm.add_test(Test)\n"
-                    plot_script_src += f"    pm.evaluate(database='data_log.sqlite', table_name='{test.get_name()}')\n"
                     try:
-                        with open(dest_file, 'a') as f: #exists, overwrite, append?
-                            f.write(plot_script_src)
+                        dest_file = os.path.join(os.path.dirname(db_file), f"reeval_data.py")
+                        import_str = test._module_path[test._module_path.index(test.project_folder_name):].replace(os.sep,'.')
+                        plot_script_src = "if __name__ == '__main__':\n"
+                        plot_script_src += f"    from PyICe.plugins.plugin_manager import Plugin_Manager\n"
+                        plot_script_src += f"    from {import_str}.test import Test\n"
+                        plot_script_src += f"    pm = Plugin_Manager()\n"
+                        plot_script_src += f"    pm.add_test(Test)\n"
+                        plot_script_src += f"    pm.evaluate(database='data_log.sqlite', table_name='{test.get_name()}')\n"
+                        try:
+                            with open(dest_file, 'a') as f: #exists, overwrite, append?
+                                f.write(plot_script_src)
+                        except Exception as e:
+                            #write locked? exists?
+                            print(type(e))
+                            print(e)
+                        with contextlib.redirect_stdout(io.StringIO()):
+                            self.evaluate(database=os.path.relpath(db_file), table_name=db_table, test_list=[test], alert=0)
                     except Exception as e:
                         #write locked? exists?
                         print(type(e))
@@ -607,7 +625,8 @@ class Plugin_Manager():
                     test.plot()
                 except Exception as e:
                     # Don't stop other test's plotting or archiving because of a plotting error.
-                    print_banner(e)
+                    if alert:
+                        print_banner(e)
                 if isinstance(test.plot_list, (LTC_plot.plot, LTC_plot.Page)):
                     test.plot_list = [self._convert_svg(test.plot_list)]
                 else:
@@ -624,7 +643,7 @@ class Plugin_Manager():
                     table_name = None
                 if reset_pf:
                     plot_filepath = None
-            elif test._is_crashed:
+            elif test._is_crashed and alert:
                 print(f"{test.get_name()} crashed. Skipping plot.")
 
     def evaluate(self, database=None, table_name=None, test_list=None):
@@ -632,7 +651,10 @@ class Plugin_Manager():
         args:   
             database - string. The location of the database with the data to evaluate If left blank, the evaluation will continue with the database in the same directory as the test script.
             table_name - string. The name of the table in the database with the relevant data. If left blank, the evaluation will continue with the table named after the test script.'''
-        print_banner('Evaluating. . .')
+        if alert:
+            print_banner('Evaluating. . .')
+        if test_list is None:
+            test_list = self.tests
         reset_db = False
         reset_tn = False
         if test_list is None:
@@ -650,7 +672,7 @@ class Plugin_Manager():
                 test._test_results = Test_Results(test._name, module=test)
                 test._db = sqlite_data(database_file=database, table_name=test.get_table_name())
                 test.evaluate_results()
-                if test._test_results._test_results:
+                if test._test_results._test_results and alert:
                     print(test.get_test_results())
                 t_r = test._test_results.json_report()
                 dest_abs_filepath = os.path.join(os.path.dirname(database), f"test_results.json")
@@ -662,19 +684,23 @@ class Plugin_Manager():
                     database = None
                 if reset_tn:
                     table_name = None
-            elif test._is_crashed:
-                print(f"{test.get_name()} crashed. Skipping evaluation.")
+            elif test._is_crashed and alert:
+                print(f"{test.get_name()} crashed. Skipping evaluation.\n\n")
                 
 
-    def correlate(self, database=None, table_name=None):
+    def correlate(self, database=None, table_name=None, test_list=None, alert=True):
         '''Run the correlate method of each test in self.tests.
         args:   
             database - string. The location of the database with the data to evaluate If left blank, the evaluation will continue with the database in the same directory as the test script.
             table_name - string. The name of the table in the database with the relevant data. If left blank, the evaluation will continue with the table named after the test script.'''
-        print_banner('Correlating. . .')
-        for test in self.tests:
+        if aleer:
+            print_banner('Correlating. . .')
+        if test_list is None:
+            test_list = self.tests
+        for test in test_list:
             if test._is_crashed:
-                print(f"{test.get_name()} crashed. Skipping correlation.")
+                if alert:
+                    print(f"{test.get_name()} crashed. Skipping correlation.")
                 continue
             if database is None:
                 database = test._db_file
@@ -685,7 +711,8 @@ class Plugin_Manager():
             test._corr_results = Test_Results(test.get_name(), module=test)
             test._db = sqlite_data(database_file=database, table_name=test.get_table_name())
             test.correlate_results()
-            print(test.get_test_results())
+            if alert:
+                print(test.get_test_results())
             t_r = test._corr_results.json_report()
             dest_abs_filepath = os.path.join(os.path.dirname(database),f"correlation_results.json")
             if t_r is not None:
