@@ -84,6 +84,8 @@ class Master_Test_Template():
             conditions - None or dictionary. A dictionary with channel names as keys and channel values as values. Used to report under what circumstances the data was taken. Default is None.'''
         self._test_results.test_limits[name]=self.get_test_limits(name)
         self._test_results._evaluate_list(name=name, iter_data=data, conditions=conditions)
+        if self._is_crashed:
+            self._test_results._register_test_failure(name=name, reason=self._crash_info, conditions='Unknown')
     def evaluate_query(self, name, query):
         '''This will compare submitted data to limits for the named test.
         args:
@@ -92,12 +94,16 @@ class Master_Test_Template():
         self._test_results.test_limits[name]=self.get_test_limits(name)
         self.get_database().query(query)
         self._test_results._evaluate_database(name=name, database=self.get_database())
+        if self._is_crashed:
+            self._test_results._register_test_failure(name=name, reason=self._crash_info, conditions='Unknown')
     def evaluate_db(self, name):
         '''This method evaluates a pre-massaged SQLite database, self.get_database(), from the user. It returns a bit of flexibility on the sequel query to the user.
         args:
             name - string. The name of the test whose limits will be used.'''
         self._test_results.test_limits[name]=self.get_test_limits(name)
         self._test_results._evaluate_database(name=name, database=self.get_database())
+        if self._is_crashed:
+            self._test_results._register_test_failure(name=name, reason=self._crash_info, conditions='Unknown')
     def evaluate(self, name, values, conditions=[], where_clause=''):
         '''This compares submitted data from a SQLite database to a named test in a more outlined fashion.
         args:
