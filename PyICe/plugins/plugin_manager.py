@@ -660,32 +660,34 @@ class Plugin_Manager():
         if test_list is None:
             test_list = self.tests
         for test in test_list:
-            if not test._skip_eval and not test._is_crashed:
-                if database is None:
-                    database = test._db_file
-                    reset_db = True
-                if table_name is None:
-                    test._table_name = test.get_name()
-                    reset_tn = True
-                else:
-                    test._table_name = table_name
-                test._test_results = Test_Results(test._name, module=test)
-                test._db = sqlite_data(database_file=database, table_name=test.get_table_name())
-                test.evaluate_results()
-                if test._test_results._test_results and alert:
-                    print(test.get_test_results())
-                t_r = test._test_results.json_report()
-                dest_abs_filepath = os.path.join(os.path.dirname(database), f"test_results.json")
-                if t_r is not None:
-                    with open(dest_abs_filepath, 'wb') as f:
-                        f.write(t_r.encode('utf-8'))
-                        f.close()
-                if reset_db:
-                    database = None
-                if reset_tn:
-                    table_name = None
-            elif test._is_crashed and alert:
-                print(f"{test.get_name()} crashed. Skipping evaluation.\n\n")
+            if not test._skip_eval:
+                try:
+                    if database is None:
+                        database = test._db_file
+                        reset_db = True
+                    if table_name is None:
+                        test._table_name = test.get_name()
+                        reset_tn = True
+                    else:
+                        test._table_name = table_name
+                    test._test_results = Test_Results(test._name, module=test)
+                    test._db = sqlite_data(database_file=database, table_name=test.get_table_name())
+                    test.evaluate_results()
+                    if test._test_results._test_results and alert:
+                        print(test.get_test_results())
+                    t_r = test._test_results.json_report()
+                    dest_abs_filepath = os.path.join(os.path.dirname(database), f"test_results.json")
+                    if t_r is not None:
+                        with open(dest_abs_filepath, 'wb') as f:
+                            f.write(t_r.encode('utf-8'))
+                            f.close()
+                    if reset_db:
+                        database = None
+                    if reset_tn:
+                        table_name = None
+                except Exception as e:
+                    if alert:
+                        traceback.print_exc()
                 
 
     def correlate(self, database=None, table_name=None, test_list=None, alert=True):
