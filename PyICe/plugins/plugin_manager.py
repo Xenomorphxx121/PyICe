@@ -437,13 +437,10 @@ class Plugin_Manager():
                             test._database = os.path.relpath(db_file)
                             test._table_name = db_table
                             test._plot_filepath = os.path.dirname(os.path.abspath(os.path.relpath(db_file)))
-                            self.plot(database=os.path.relpath(db_file), table_name=db_table, test_list=[test], alert=False)
+                            self.plot(database=os.path.relpath(db_file), table_name=db_table, test_list=[test])
                     except Exception as e:
-                        #write locked? exists?
-                        print(type(e))
-                        print(e)
-                    with contextlib.redirect_stdout(io.StringIO()):
-                        self.plot(database=os.path.relpath(db_file), table_name=db_table, test_list=[test])
+                        traceback.print_exc()
+                        print(f'{test.get_name()} crashed while trying to generate archived plots.\n\n')
                 if 'evaluate_tests' in self.used_plugins:
                     try:
                         dest_file = os.path.join(os.path.dirname(db_file), f"reeval_data.py")
@@ -462,13 +459,10 @@ class Plugin_Manager():
                             print(type(e))
                             print(e)
                         with contextlib.redirect_stdout(io.StringIO()):
-                            self.evaluate(database=os.path.relpath(db_file), table_name=db_table, test_list=[test], alert=0)
+                            self.evaluate(database=os.path.relpath(db_file), table_name=db_table, test_list=[test])
                     except Exception as e:
-                        #write locked? exists?
-                        print(type(e))
-                        print(e)
-                    with contextlib.redirect_stdout(io.StringIO()):
-                        self.evaluate(database=os.path.relpath(db_file), table_name=db_table, test_list=[test])
+                        traceback.print_exc()
+                        print(f'{test.get_name()} crashed while trying to generate archived jsons.\n\n')
                 if 'bench_image_creation' in self.used_plugins:
                     self.visualizer.generate(file_base_name="Bench_Config", prune=True, file_format='svg', engine='neato', file_location=os.path.dirname(db_file))
 
@@ -625,8 +619,7 @@ class Plugin_Manager():
                     test.plot()
                 except Exception as e:
                     # Don't stop other test's plotting or archiving because of a plotting error.
-                    if alert:
-                        print_banner(e)
+                    print_banner(e)
                 if isinstance(test.plot_list, (LTC_plot.plot, LTC_plot.Page)):
                     test.plot_list = [self._convert_svg(test.plot_list)]
                 else:
@@ -643,7 +636,7 @@ class Plugin_Manager():
                     table_name = None
                 if reset_pf:
                     plot_filepath = None
-            elif test._is_crashed and alert:
+            elif test._is_crashed:
                 print(f"{test.get_name()} crashed. Skipping plot.")
 
     def evaluate(self, database=None, table_name=None, test_list=None):
@@ -651,8 +644,7 @@ class Plugin_Manager():
         args:   
             database - string. The location of the database with the data to evaluate If left blank, the evaluation will continue with the database in the same directory as the test script.
             table_name - string. The name of the table in the database with the relevant data. If left blank, the evaluation will continue with the table named after the test script.'''
-        if alert:
-            print_banner('Evaluating. . .')
+        print_banner('Evaluating. . .')
         if test_list is None:
             test_list = self.tests
         reset_db = False
@@ -686,23 +678,20 @@ class Plugin_Manager():
                     if reset_tn:
                         table_name = None
                 except Exception as e:
-                    if alert:
-                        traceback.print_exc()
+                    traceback.print_exc()
                 
 
-    def correlate(self, database=None, table_name=None, test_list=None, alert=True):
+    def correlate(self, database=None, table_name=None, test_list=None):
         '''Run the correlate method of each test in self.tests.
         args:   
             database - string. The location of the database with the data to evaluate If left blank, the evaluation will continue with the database in the same directory as the test script.
             table_name - string. The name of the table in the database with the relevant data. If left blank, the evaluation will continue with the table named after the test script.'''
-        if aleer:
-            print_banner('Correlating. . .')
+        print_banner('Correlating. . .')
         if test_list is None:
             test_list = self.tests
         for test in test_list:
             if test._is_crashed:
-                if alert:
-                    print(f"{test.get_name()} crashed. Skipping correlation.")
+                print(f"{test.get_name()} crashed. Skipping correlation.")
                 continue
             if database is None:
                 database = test._db_file
@@ -713,8 +702,7 @@ class Plugin_Manager():
             test._corr_results = Test_Results(test.get_name(), module=test)
             test._db = sqlite_data(database_file=database, table_name=test.get_table_name())
             test.correlate_results()
-            if alert:
-                print(test.get_test_results())
+            print(test.get_test_results())
             t_r = test._corr_results.json_report()
             dest_abs_filepath = os.path.join(os.path.dirname(database),f"correlation_results.json")
             if t_r is not None:
