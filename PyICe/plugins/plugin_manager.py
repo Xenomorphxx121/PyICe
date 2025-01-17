@@ -360,6 +360,7 @@ class Plugin_Manager():
     def _metalog(self, test):
         '''This is separate from the _create_metalogger method in order to give other plugins the opportunity to add to the metalogger before the channel list is commited to a table.'''
         test._metalogger.new_table(table_name=test.get_name() + "_metadata", replace_table=True)
+        test._metatable_name = f"{test.get_name()}_metadata"
         test._metalogger.log()
 
     ###
@@ -579,9 +580,11 @@ class Plugin_Manager():
                     reset_db = True
                 if table_name is None:
                     test._table_name = test.get_name()
+                    test._metatable_name = f"{test.get_name()}_metadata"
                     reset_tn = True
                 else:
                     test._table_name=table_name
+                    test._metatable_name = f"{table_name}_metadata"
                 if plot_filepath is None:
                     test._plot_filepath = os.path.dirname(os.path.abspath(database))
                     reset_pf = True
