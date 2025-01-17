@@ -60,6 +60,11 @@ class Master_Test_Template():
             return self._table_name
         else:
             print(f'No table name has been assigned to {self.get_name()} at this time.')
+    def get_metatable_name(self):
+        if hasattr(self, '_metatable_name'):
+            return self._metatable_name
+        else:
+            print(f'No metatable name has been assigned to {self.get_name()} at this time.')
     def get_plot_filepath(self):
         if hasattr(self, '_plot_filepath'):
             return self._plot_filepath
