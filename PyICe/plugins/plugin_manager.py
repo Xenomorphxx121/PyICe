@@ -365,12 +365,15 @@ class Plugin_Manager():
             else:
                 this_archive_folder = archive_folder
             db_dest_file = archiver.compute_db_destination(this_archive_folder)
-            archiver.copy_table(db_source_table=test.get_name(), db_dest_table=test.get_name(), db_dest_file=db_dest_file)
+            archive_table_name = test.get_name()
+            if test._is_crashed:
+                archive_table_name+='_CRASHED'
+            archiver.copy_table(db_source_table=test.get_name(), db_dest_table=archive_table_name, db_dest_file=db_dest_file)
             test._logger.copy_table(old_table=test.get_name(), new_table=test.get_name()+'_'+archive_folder)
             if 'traceability' in self.used_plugins:
                 archiver.copy_table(db_source_table=test.get_name()+'_metadata', db_dest_table=test.get_name()+'_metadata', db_dest_file=db_dest_file)
                 test._logger.copy_table(old_table=test.get_name()+'_metadata', new_table=test.get_name()+'_'+archive_folder+'_metadata')
-            archived_tables.append((test, test.get_name(), db_dest_file))
+            archived_tables.append((test, archive_table_name, db_dest_file))
             # test._add_db_indices(table_name=test.get_name(), db_file=db_dest_file)
         if len(archived_tables):
             arch_plot_scripts = []
@@ -383,7 +386,7 @@ class Plugin_Manager():
                     plot_script_src += f"    from {import_str}.test import Test\n"
                     plot_script_src += f"    pm = Plugin_Manager()\n"
                     plot_script_src += f"    pm.add_test(Test)\n"
-                    plot_script_src += f"    pm.plot(database='data_log.sqlite', table_name='{test.get_name()}')\n"
+                    plot_script_src += f"    pm.plot(database='data_log.sqlite', table_name='{archive_table_name}')\n"
                     try:
                         with open(dest_file, 'a') as f: #exists, overwrite, append?
                             f.write(plot_script_src)
@@ -401,7 +404,7 @@ class Plugin_Manager():
                     plot_script_src += f"    from {import_str}.test import Test\n"
                     plot_script_src += f"    pm = Plugin_Manager()\n"
                     plot_script_src += f"    pm.add_test(Test)\n"
-                    plot_script_src += f"    pm.evaluate(database='data_log.sqlite', table_name='{test.get_name()}')\n"
+                    plot_script_src += f"    pm.evaluate(database='data_log.sqlite', table_name='{archive_table_name}')\n"
                     try:
                         with open(dest_file, 'a') as f: #exists, overwrite, append?
                             f.write(plot_script_src)
@@ -596,6 +599,8 @@ class Plugin_Manager():
                 else:
                     test._table_name = table_name
                 test._test_results = Test_Results(test._name, module=test)
+                if test._is_crashed or test._table_name.endswith('_CRASHED'):
+                    test._test_results._failure_override = True
                 test._db = sqlite_data(database_file=database, table_name=test.get_table_name())
                 test.evaluate_results()
                 if test._test_results._test_results:
