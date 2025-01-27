@@ -102,6 +102,9 @@ class generic_results():
                     continue
                 res_dict['traceability'][channel_name] = trace_data[trace_data.keys().index(channel_name)]
 
+        if self._failure_override:
+            res_dict['test_crashed'] = True
+
         res_dict['tests'] = {}
         for t_d in declarations:
             res_dict['tests'][t_d] = {}
@@ -157,7 +160,10 @@ class generic_results():
                                                                    }
                 else:
                     raise Exception("I'm lost.")
-        res_dict['summary'] = {'passes': bool(self)}
+        if self._failure_override:
+            res_dict['summary'] = {'passes': False}
+        else:
+            res_dict['summary'] = {'passes': bool(self)}
         return json.dumps(res_dict, indent=2, ensure_ascii=False, cls=CustomJSONizer)
 
 class Test_Results(generic_results):
@@ -410,6 +416,8 @@ class Test_Results_Reload(Test_Results):
         if self.__results['schema_version'] != self._schema_version:
             raise ResultsSchemaMismatchException(f'Results file {results_json} written with schema version {self.__results["schema_version"]}, but reader expecting {self._schema_version}.')
         self._init(name=self.__results['test_module'], module=None)
+        if 'test_crashed' in self.__results:
+            self._failure_override = True
         self._set_traceability_info(datetime=self.__results["collection_date"], **self.__results["traceability"])
         for test in self.__results['tests']:
             self._register_test(name=test, **self.__results['tests'][test]['declaration'])
