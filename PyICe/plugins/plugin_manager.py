@@ -72,6 +72,7 @@ class Plugin_Manager():
         Default value is an empty list.
         '''
         self.collect(temperatures)
+        self._temperatures = temperatures
         self.plot()
         if 'evaluate_tests' in self.plugins:
             self._test_results_str = ''
@@ -189,6 +190,7 @@ class Plugin_Manager():
             break
         if self.temperature_channel == None:
             self.temperature_channel = self.master.add_channel_dummy("tdegc")
+        if not self._temperatures:
             self.temperature_channel.write(25)
 
     def _add_components(self):
